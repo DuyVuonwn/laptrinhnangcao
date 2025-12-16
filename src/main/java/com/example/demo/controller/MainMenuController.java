@@ -12,13 +12,17 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.control.*;
 
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.ResultSet;
+import java.net.URL;
 import java.sql.Statement;
 
 import javafx.stage.Stage;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+
+import javafx.stage.Modality;
 
 public class MainMenuController {
     private User currentUser;
@@ -269,7 +273,38 @@ public class MainMenuController {
 
     @FXML
     private void handleReduceAsset() {
-        System.out.println("Giảm tài sản...");
+        try {
+            // Lấy tài sản đang được chọn từ bảng
+            Asset selectedAsset = assetTable.getSelectionModel().getSelectedItem();
+            if (selectedAsset == null) {
+                new Alert(Alert.AlertType.WARNING, "Vui lòng chọn một tài sản để giảm.").showAndWait();
+                return;
+            }
+
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/example/demo/view/ReduceAssetDialog.fxml"));
+            Parent root = loader.load();
+
+            ReduceAssetDialogController controller = loader.getController();
+
+            // Tạo Stage mới cho dialog
+            Stage dialogStage = new Stage();
+            dialogStage.setTitle("Giảm tài sản");
+            dialogStage.initModality(Modality.WINDOW_MODAL); // Đặt dialog là modal
+            dialogStage.initOwner(lblUsername.getScene().getWindow()); // Đặt owner là cửa sổ chính
+            dialogStage.setScene(new javafx.scene.Scene(root));
+
+            controller.setDialogStage(dialogStage);
+            controller.setAsset(selectedAsset); // Truyền tài sản đã chọn vào dialog
+
+            dialogStage.showAndWait(); // Hiển thị và đợi dialog đóng
+
+            // Sau khi dialog đóng, làm mới danh sách tài sản trong bảng
+            loadAssets();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            new Alert(Alert.AlertType.ERROR, "Không thể mở hộp thoại giảm tài sản: " + e.getMessage()).showAndWait();
+        }
     }
 
     @FXML
@@ -288,25 +323,46 @@ public class MainMenuController {
             // Lấy Stage hiện tại
             Stage stage = (Stage) lblUsername.getScene().getWindow();
 
-            // Load lại Login.fxml
-            Parent root = FXMLLoader.load(getClass().getResource("/com/example/demo/view/Login.fxml"));
-            Scene scene = new Scene(root);
-            scene.getStylesheets().add(getClass().getResource("/com/example/demo/style/style.css").toExternalForm());
+            // BẮT BUỘC: Tắt maximize và fullscreen trước
+            stage.setMaximized(false);
+            stage.setFullScreen(false);
 
+            // Load lại Login.fxml
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/example/demo/view/Login.fxml"));
+            Parent root = loader.load();
+
+            // Set kích thước TRƯỚC KHI tạo scene
+            stage.setWidth(400);
+            stage.setHeight(550);
+
+            // Tạo scene mới
+            Scene scene = new Scene(root);
+
+            // Thêm CSS
+            URL cssURL = getClass().getResource("/com/example/demo/style/style.css");
+            if (cssURL != null) {
+                scene.getStylesheets().add(cssURL.toExternalForm());
+            }
+
+            // Set scene
             stage.setScene(scene);
             stage.setTitle("Đăng nhập - QT&VT");
 
-            // Reset kích thước cửa sổ login
+            // Set lại kích thước SAU KHI set scene (để chắc chắn)
             stage.setWidth(400);
             stage.setHeight(550);
-            stage.setMaximized(false);
+            stage.setResizable(true); // hoặc false nếu không muốn resize
 
+            // Center lại cửa sổ
             stage.centerOnScreen();
-            stage.show();
 
-        } catch (Exception e) {
+        } catch (IOException e) {
             e.printStackTrace();
-            new Alert(Alert.AlertType.ERROR, "Không thể đăng xuất!").showAndWait();
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Lỗi");
+            alert.setHeaderText("Không thể đăng xuất!");
+            alert.setContentText("Chi tiết: " + e.getMessage());
+            alert.showAndWait();
         }
     }
 
